@@ -2,6 +2,7 @@ package chip8
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 )
@@ -39,11 +40,11 @@ type Chip8 struct {
 	sp uint8  // Holds the current stack pointer value
 	iv uint16 // Holds the index register value
 
-	delayTimer uint8
-	soundTimer uint8
+	delayTimer uint8 // Timer used to count down a delay
+	soundTimer uint8 // Timer used to count down to a beep being played
 
-	shouldDraw bool
-	beeper     func()
+	shouldDraw bool   // Whether we should draw to the screen
+	beeper     func() // Function to play a beep
 }
 
 // Initialise and return  an instance of the CHIP-8 VM
@@ -55,7 +56,9 @@ func Init() Chip8 {
 	}
 
 	// Load font into memory from bottom (we can use <0x200 for fonts)
+	fmt.Printf("Loading fonts into memory\n")
 	for i := 0; i < len(fontSet); i++ {
+		log.Printf("\tLoading font [0x%X] into memory position [0x%X]\n", fontSet[i], instance.memory[i])
 		instance.memory[i] = fontSet[i]
 	}
 
@@ -93,6 +96,7 @@ func (cpu *Chip8) Key(num uint8, down bool) {
 //	 -> Check delay/sound timers
 func (cpu *Chip8) Cycle() {
 	cpu.oc = (uint16(cpu.memory[cpu.pc])<<8 | uint16(cpu.memory[cpu.pc+1]))
+	fmt.Printf("Opcode: 0x%X\n", cpu.oc)
 
 	/*
 		Get the most significant 4-bits of the instruction by bitwise AND'ing with 0xF000
@@ -101,8 +105,8 @@ func (cpu *Chip8) Cycle() {
 	*/
 	switch cpu.oc & 0xF000 {
 	case 0x000:
-		switch cpu.oc & 0x00FF {
-		case 0x00E0: // 0x00E0: CLS (Clear screen)
+		switch cpu.oc & 0x000F {
+		case 0x0000: // 0x00E0: CLS (Clear screen)
 			for i := 0; i < len(cpu.display); i++ {
 				for j := 0; j < len(cpu.display[i]); j++ {
 					cpu.display[i][j] = 0x0
@@ -111,10 +115,10 @@ func (cpu *Chip8) Cycle() {
 			cpu.shouldDraw = true
 			cpu.pc += 2
 		case 0x000E: // 0x00EE: RET (Returns from a subroutine)
-			cpu.pc = cpu.stack[cpu.sp] + 2
 			cpu.sp--
+			cpu.pc = cpu.stack[cpu.sp] + 2
 		default:
-			fmt.Printf("Invalid opcode %X\n", cpu.oc)
+			fmt.Printf("Invalid opcode: 0x%X\n", cpu.oc)
 		}
 	case 0x1000: // 0x1NNN: JP addr (Jumps to address at NNN)
 		cpu.pc = cpu.oc & 0x0FFF
@@ -194,7 +198,7 @@ func (cpu *Chip8) Cycle() {
 			cpu.vx[(cpu.oc&0x0F00)>>8] = cpu.vx[(cpu.oc&0x0F00)>>8] << 1
 			cpu.pc += 2
 		default:
-			fmt.Printf("Invalid opcode: %X\n", cpu.oc)
+			fmt.Printf("Invalid opcode: 0x%X\n", cpu.oc)
 		}
 	case 0x9000: // 0x9XY0: SNE Vx, Vy (Skips next instruction if Vx == Vy)
 		if cpu.vx[(cpu.oc&0x0F00)>>8] != cpu.vx[(cpu.oc&0x00F0)>>4] {
@@ -246,7 +250,7 @@ func (cpu *Chip8) Cycle() {
 				cpu.pc += 2
 			}
 		default:
-			fmt.Printf("Invalid opcode: %X\n", cpu.oc)
+			fmt.Printf("Invalid opcode: 0x%X\n", cpu.oc)
 		}
 	case 0xF000:
 		switch cpu.oc & 0x00FF {
@@ -300,10 +304,10 @@ func (cpu *Chip8) Cycle() {
 			cpu.iv = ((cpu.oc & 0x0F00) >> 8) + 1
 			cpu.pc += 2
 		default:
-			fmt.Printf("Invalid opcode: %X\n", cpu.oc)
+			fmt.Printf("Invalid opcode: 0x%X\n", cpu.oc)
 		}
 	default:
-		fmt.Printf("Invalid opcode: %X\n", cpu.oc)
+		fmt.Printf("Invalid opcode: 0x%X\n", cpu.oc)
 	}
 
 	if cpu.delayTimer > 0 {

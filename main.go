@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -11,64 +12,78 @@ import (
 )
 
 const (
-	CHIP8_DISP_HEIGHT int32 = 32
-	CHIP8_DISP_WIDTH  int32 = 64
+	CHIP8_DISP_HEIGHT int32 = 32 // Will be multiplied by modifier
+	CHIP8_DISP_WIDTH  int32 = 64 // Will be multiplied by modifier
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		panic("Please provide modifier and c8 ROM file")
+	if len(os.Args) < 2 {
+		fmt.Printf("At least a ROM file must be provided")
+		os.Exit(1)
 	}
 
-	fileName := os.Args[2]
+	// Set default value for modifier
 	var modifier int32 = 10
+	var fileName string = ""
 
-	if len(os.Args) == 3 {
-		if val, err := strconv.ParseInt(os.Args[1], 10, 32); err != nil {
-			panic(err)
-		} else {
-			if val > 10 {
-				modifier = int32(val)
-			}
+	if len(os.Args) == 2 {
+		// User should have only provided a ROM file here
+		fileName = os.Args[1]
+	} else if len(os.Args) == 3 {
+		// User provided both a ROM file and modifier
+		strModifier := os.Args[1]
+		fileName = os.Args[2]
+		val, err := strconv.ParseInt(strModifier, 10, 32)
+		if err != nil {
+			fmt.Printf("Modifier (first arg) should be a valid number")
+			os.Exit(1)
 		}
+		if val > 0 {
+			modifier = int32(val)
+		} else {
+			fmt.Printf("Modifier (first arg) must be greater than 0")
+		}
+	} else {
+		fmt.Printf("Invalid number of arguments, expected 2 or 3, got %d\n", len(os.Args))
+		os.Exit(1)
 	}
 
-	// Initialise CHIP8
+	// Initialise CHIP8 emulator
 	c8 := chip8.Init()
 	if err := c8.LoadProgram(fileName); err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 
 	// Initialise SDL2
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	defer sdl.Quit()
-
-	// Initialise Beeper
-	beep, err := beeper.Init()
-	if err != nil {
-		panic(err)
-	}
-	defer beep.Close()
-
-	c8.AddBeep(func() {
-		beep.Play()
-	})
 
 	// Create window
 	window, err := sdl.CreateWindow("CHIP8 - "+fileName, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, CHIP8_DISP_WIDTH*modifier, CHIP8_DISP_HEIGHT*modifier, sdl.WINDOW_SHOWN)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	defer window.Destroy()
 
 	// Create render surface
 	canvas, err := sdl.CreateRenderer(window, -1, 0)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	defer canvas.Destroy()
+
+	// Initialise Beeper
+	beep, err := beeper.Init()
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+	defer beep.Close()
+
+	c8.AddBeep(func() {
+		beep.Play()
+	})
 
 	// Main program loop
 	for {
@@ -101,12 +116,23 @@ func main() {
 		}
 
 		// Poll for quit and keyboard events
+		/*
+			KeyMap:
+
+				CHIP8 KEY						KEYBOARD KEY
+			1 | 2 | 3 | C   ->   1 | 2 | 3 | 4
+			4 | 5 | 6 | D   ->   Q | W | E | R
+			7 | 8 | 9 | E   ->   A | S | D | F
+			A | 0 | B | F   ->   Z | X | C | V
+		*/
+
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch et := event.(type) {
 			case *sdl.QuitEvent:
 				os.Exit(0)
 			case *sdl.KeyboardEvent:
 				if et.Type == sdl.KEYUP {
+					fmt.Printf("KEYUP EVENT\n")
 					switch et.Keysym.Sym {
 					case sdl.K_1:
 						c8.Key(0x1, false)
@@ -142,6 +168,7 @@ func main() {
 						c8.Key(0xF, false)
 					}
 				} else if et.Type == sdl.KEYDOWN {
+					fmt.Printf("KEYDOWN EVENT\n")
 					switch et.Keysym.Sym {
 					case sdl.K_1:
 						c8.Key(0x1, true)
