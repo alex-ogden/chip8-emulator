@@ -1,8 +1,27 @@
 use crate::chip8::Chip8;
 
+/*
+    Instructions:
+
+    These are functions that cover each of the 34 opcodes for the (original) CHIP8
+    They are labelled after their actual CHIP8 assembly instructions i.e:
+        and_vx_vy == AND Vx, Vy
+
+    Some take arguments other than &mut self, these are:
+
+    nnn or addr - A 12-bit value, the lowest 12 bits of the instruction
+    n or nibble - A 4-bit value, the lowest 4 bits of the instruction
+    x - A 4-bit value, the lower 4 bits of the high byte of the instruction
+    y - A 4-bit value, the upper 4 bits of the low byte of the instruction
+    kk or byte - An 8-bit value, the lowest 8 bits of the instruction
+
+    These are pre-decoded before the function is called within the execute() function
+    within ./mod.rs
+*/
+
 impl Chip8 {
     // 00E0 - CLS: Clear the display
-    pub fn clear_screen(&mut self) {
+    pub fn cls(&mut self) {
         self.display = [[false; 64]; 32];
     }
 

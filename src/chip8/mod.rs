@@ -139,7 +139,7 @@ impl Chip8 {
         // Match opcodes
         match opcode & 0xF000 {
             0x0000 => match kk {
-                0xE0 => self.clear_screen(),
+                0xE0 => self.cls(),
                 0xEE => self.ret(),
                 _ => return Err(format!("Unknown opcode: {:#06X}", opcode)),
             },
