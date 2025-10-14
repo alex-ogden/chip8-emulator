@@ -62,45 +62,45 @@ impl Chip8 {
         self.memory[0x200..0x200 + rom.len()].copy_from_slice(&rom);
     }
 
-    pub fn cycle(&mut self) -> Result<(), String> {
+    pub fn cycle(&mut self, debug_enabled: bool) -> Result<(), String> {
         // Fetch opcode
         let opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
+        if debug_enabled {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
 
-        let stdout = io::stdout();
-        let mut handle = stdout.lock();
+            write!(handle, "\x1b[2J\x1b[H").unwrap(); // Clear screen and move cursor
 
-        write!(handle, "\x1b[2J\x1b[H").unwrap(); // Clear screen and move cursor
+            write!(handle, "---------------- CHIP-8 DEBUGGER ----------------\n").unwrap();
+            write!(handle, "PC: {:#06X}    I: {:#06X}    Opcode: {:#06X}\n", self.pc, self.i, opcode).unwrap();
+            write!(handle, "Timers: Delay: {:#04X}    Sound: {:#04X}\n\n", self.delay_timer, self.sound_timer).unwrap();
 
-        write!(handle, "---------------- CHIP-8 DEBUGGER ----------------\n").unwrap();
-        write!(handle, "PC: {:#06X}    I: {:#06X}    Opcode: {:#06X}\n", self.pc, self.i, opcode).unwrap();
-        write!(handle, "Timers: Delay: {:#04X}    Sound: {:#04X}\n\n", self.delay_timer, self.sound_timer).unwrap();
+            write!(handle, "Registers:\n").unwrap();
+            for row in 0..8 {
+                for col in 0..2 {
+                    let index = row * 2 + col;
+                    write!(handle, "V{:X}: {:#04X}  ", index, self.v[index]).unwrap();
+                }
+                write!(handle, "\n").unwrap();
+            }
 
-        write!(handle, "Registers:\n").unwrap();
-        for row in 0..8 {
-            for col in 0..2 {
-                let index = row * 2 + col;
-                write!(handle, "V{:X}: {:#04X}  ", index, self.v[index]).unwrap();
+            write!(handle, "\nStack Frames:\n").unwrap();
+            for (i, val) in self.stack.iter().enumerate() {
+                write!(handle, "[{}] {:#06X}\n", i, val).unwrap();
+            }
+
+            write!(handle, "\nKeys:\n").unwrap();
+            for (i, &pressed) in self.keys.iter().enumerate() {
+                if pressed {
+                    write!(handle, "[{:X}] ", i).unwrap();
+                }
             }
             write!(handle, "\n").unwrap();
+
+            write!(handle, "-------------------------------------------------\n").unwrap();
+            handle.flush().unwrap();
         }
-
-        write!(handle, "\nStack Frames:\n").unwrap();
-        for (i, val) in self.stack.iter().enumerate() {
-            write!(handle, "[{}] {:#06X}\n", i, val).unwrap();
-        }
-
-        write!(handle, "\nKeys:\n").unwrap();
-        for (i, &pressed) in self.keys.iter().enumerate() {
-            if pressed {
-                write!(handle, "[{:X}] ", i).unwrap();
-            }
-        }
-        write!(handle, "\n").unwrap();
-
-        write!(handle, "-------------------------------------------------\n").unwrap();
-        handle.flush().unwrap();
-
         // Increment program counter, now that we have our opcode
         self.pc += 2;
 

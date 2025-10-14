@@ -11,14 +11,23 @@ const DISPLAY_HEIGHT: usize = 32;
 
 fn main() {
     // Parse arugments
-    let args: Vec<String> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
         eprintln!("ERROR: Invalid number of arguments!");
-        eprintln!("Usage: {} <ROM file> [speed] [resolution-scale]", args[0]);
+        eprintln!("Usage: {} <ROM file> [speed] [resolution-scale] [--debug]", args[0]);
+        eprintln!("Defaults:");
+        eprintln!("\tspeed: 10");
+        eprintln!("\tresolution scale: 10");
+        eprintln!("--debug can be used anywhere in args to enable terminal-based debugger");
         std::process::exit(1);
     }
-    
+
+    let debug_enabled: bool = args.contains(&"--debug".to_string());
+
+    // Remove --debug from args if it exists
+    args.retain(|val| val != "--debug");
+
     let rom_path = &args[1];
     let speed: u32 = if args.len() >= 3 {
         args[2].parse().unwrap_or_else(|_| {
@@ -62,7 +71,7 @@ fn main() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // Run several cycles per frame
         for _ in 0..speed {
-            if let Err(e) = chip8.cycle() {
+            if let Err(e) = chip8.cycle(debug_enabled) {
                 eprintln!("ERROR: {}", e);
                 return;
             }

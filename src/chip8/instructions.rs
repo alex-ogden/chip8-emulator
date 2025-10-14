@@ -63,16 +63,19 @@ impl Chip8 {
     // 8xy1 - OR Vx, Vy: Set Vx = Vx OR Vy
     pub fn or_vx_vy(&mut self, x: usize, y: usize) {
         self.v[x] |= self.v[y];
+        self.v[0xF] = 0;
     }
     
     // 8xy2 - AND Vx, Vy: Set Vx = Vx AND Vy
     pub fn and_vx_vy(&mut self, x: usize, y: usize) {
         self.v[x] &= self.v[y];
+        self.v[0xF] = 0;
     }
     
     // 8xy3 - XOR Vx, Vy: Set Vx = Vx XOR Vy
     pub fn xor_vx_vy(&mut self, x: usize, y: usize) {
         self.v[x] ^= self.v[y];
+        self.v[0xF] = 0;
     }
     
     // 8xy4 - ADD Vx, Vy: Set Vx = Vx + Vy, set VF = carry
