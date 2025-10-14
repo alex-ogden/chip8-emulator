@@ -66,15 +66,31 @@ impl Chip8 {
         // Fetch opcode
         let opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
+
+        // Enable terminal debugging if debug_enabled is true
         if debug_enabled {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
 
             write!(handle, "\x1b[2J\x1b[H").unwrap(); // Clear screen and move cursor
 
-            write!(handle, "---------------- CHIP-8 DEBUGGER ----------------\n").unwrap();
-            write!(handle, "PC: {:#06X}    I: {:#06X}    Opcode: {:#06X}\n", self.pc, self.i, opcode).unwrap();
-            write!(handle, "Timers: Delay: {:#04X}    Sound: {:#04X}\n\n", self.delay_timer, self.sound_timer).unwrap();
+            write!(
+                handle,
+                "---------------- CHIP-8 DEBUGGER ----------------\n"
+            )
+            .unwrap();
+            write!(
+                handle,
+                "PC: {:#06X}    I: {:#06X}    Opcode: {:#06X}\n",
+                self.pc, self.i, opcode
+            )
+            .unwrap();
+            write!(
+                handle,
+                "Timers: Delay: {:#04X}    Sound: {:#04X}\n\n",
+                self.delay_timer, self.sound_timer
+            )
+            .unwrap();
 
             write!(handle, "Registers:\n").unwrap();
             for row in 0..8 {
@@ -98,7 +114,11 @@ impl Chip8 {
             }
             write!(handle, "\n").unwrap();
 
-            write!(handle, "-------------------------------------------------\n").unwrap();
+            write!(
+                handle,
+                "-------------------------------------------------\n"
+            )
+            .unwrap();
             handle.flush().unwrap();
         }
         // Increment program counter, now that we have our opcode
@@ -110,11 +130,11 @@ impl Chip8 {
 
     fn execute(&mut self, opcode: u16) -> Result<(), String> {
         // Extract nibbles
-        let nnn = opcode & 0x0FFF;                  // 12-bit address
-        let kk = (opcode & 0x00FF) as u8;           // 8-bit (byte) value
-        let n = (opcode & 0x000F) as u8;            // 4-bit nibble 
-        let x = ((opcode & 0x0F00) >> 8) as usize;  // 4-bit value - high byte 
-        let y = ((opcode & 0x00F0) >> 4) as usize;  // 4-bit value - low byte 
+        let nnn = opcode & 0x0FFF; // 12-bit address
+        let kk = (opcode & 0x00FF) as u8; // 8-bit (byte) value
+        let n = (opcode & 0x000F) as u8; // 4-bit nibble
+        let x = ((opcode & 0x0F00) >> 8) as usize; // 4-bit value - high byte
+        let y = ((opcode & 0x00F0) >> 4) as usize; // 4-bit value - low byte
 
         // Match opcodes
         match opcode & 0xF000 {
