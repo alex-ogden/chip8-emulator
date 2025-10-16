@@ -5,7 +5,9 @@ use std::env;
 use std::fs;
 use std::time::{Duration, Instant};
 
-// Constants
+// Display properties
+// CHIP8 display is 64x32 but we provide a scaler to ensure the screen is big enough
+// for modern systems (default: 10)
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 32;
 
@@ -26,9 +28,9 @@ fn main() {
         std::process::exit(1);
     }
 
+    // If the user passes --debug, detect and enable debug mode, then remove from args to ensure
+    // other arguments are in the correct place when parsing
     let debug_enabled: bool = args.contains(&"--debug".to_string());
-
-    // Remove --debug from args if it exists
     args.retain(|val| val != "--debug");
 
     let rom_path = &args[1];
@@ -38,7 +40,7 @@ fn main() {
             std::process::exit(1);
         })
     } else {
-        10
+        10      // Default value for speed (clock cycles per frame)
     };
     let res_scale: u32 = if args.len() >= 4 {
         args[3].parse().unwrap_or_else(|_| {
@@ -46,13 +48,14 @@ fn main() {
             std::process::exit(1);
         })
     } else {
-        10
+        10      // Default value for resolution scale (default provides a 640x320 display)
     };
 
     // Load ROM file
     let rom =
         fs::read(rom_path).unwrap_or_else(|_| panic!("ERROR: Failed to load ROM: {}", rom_path));
 
+    // Initialise a new CHIP8 instance
     let mut chip8 = chip8::Chip8::new();
     chip8.load_rom(&rom);
 
@@ -66,8 +69,8 @@ fn main() {
     .expect("ERROR: Failed to create window");
 
     window.set_target_fps(60);
-    //window.limit_update_rate(Some(Duration::from_micros(16600))); // ~60FPS
 
+    // Initialise display buffer
     let mut buffer: Vec<u32> = vec![0; DISPLAY_WIDTH * DISPLAY_HEIGHT];
     let mut last_timer_update = Instant::now();
 
@@ -95,7 +98,7 @@ fn main() {
         // Update input
         update_keys(&window, &mut chip8);
 
-        // Render display to buffer
+        // Build up the buffer
         for (i, row) in chip8.display.iter().enumerate() {
             for (j, &pixel) in row.iter().enumerate() {
                 let idx = i * DISPLAY_WIDTH + j;
@@ -103,6 +106,7 @@ fn main() {
             }
         }
 
+        // Update the window with the buffer
         window
             .update_with_buffer(&buffer, DISPLAY_WIDTH, DISPLAY_HEIGHT)
             .expect("Failed to update window");

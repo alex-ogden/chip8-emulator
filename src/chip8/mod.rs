@@ -2,19 +2,18 @@ mod instructions;
 
 use std::io::{self, Write};
 
+// CHIP-8 Struct containing all info related to the CHIP-8 system
 pub struct Chip8 {
-    pub memory: [u8; 4096],
-    pub v: [u8; 16],
-    pub i: u16,
-    pub pc: u16,
-    pub stack: [u16; 16],
-    pub sp: u8,
-    pub display: [[bool; 64]; 32],
-    pub delay_timer: u8,
-    pub sound_timer: u8,
-
-    // Keys (keyboard)
-    pub keys: [bool; 16],
+    pub memory: [u8; 4096],        // 4KB memory
+    pub v: [u8; 16],               // V registers (0x0 -> 0xF)
+    pub i: u16,                    // I register
+    pub pc: u16,                   // Program counter (starts at 0x200)
+    pub stack: [u16; 16],          // 16 stack registers
+    pub sp: u8,                    // Stack pointer
+    pub display: [[bool; 64]; 32], // Display buffer
+    pub delay_timer: u8,           // Delay timer
+    pub sound_timer: u8,           // Sound timer
+    pub keys: [bool; 16],          // Keyboard
 }
 
 impl Chip8 {
@@ -23,7 +22,7 @@ impl Chip8 {
             memory: [0; 4096],
             v: [0; 16],
             i: 0,
-            pc: 0x200, // Start program counter from 0x200
+            pc: 0x200,
             stack: [0; 16],
             sp: 0,
             display: [[false; 64]; 32],
@@ -32,8 +31,8 @@ impl Chip8 {
             keys: [false; 16],
         };
 
-        chip8.load_fonts();
-        chip8 // Return a chip8 instance
+        chip8.load_fonts(); // Load fonts before returning instance
+        chip8
     }
 
     fn load_fonts(&mut self) {
@@ -55,15 +54,38 @@ impl Chip8 {
             0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
             0xF0, 0x80, 0xF0, 0x80, 0x80, // F
         ];
+
+        // Copy fonts into memory from 0x50 onwards
         self.memory[0x50..0x50 + fonts.len()].copy_from_slice(&fonts);
     }
 
     pub fn load_rom(&mut self, rom: &[u8]) {
+        // Load ROM data from 0x200 onwards
         self.memory[0x200..0x200 + rom.len()].copy_from_slice(&rom);
     }
 
     pub fn cycle(&mut self, debug_enabled: bool) -> Result<(), String> {
         // Fetch opcode
+        /*
+            Given the two following opcodes:
+                0x8921 and 0x8752
+            The following takes these (8-bit) opcodes, casts them to 16-bit values, and combines OR's them into a single instruction:
+
+            0x8921: 0000 0000 0000 0000 1000 1001 0010 0001
+            0x8752: 0000 0000 0000 0000 1000 0111 0101 0010
+
+            0x8921 << 8: 1000 1001 0010 0001 0000 0000 0000 0000
+
+            This leaves us OR'ing the above with the binary representation of 0x8752 as 16-bit, which look like this:
+
+                1000 1001 0010 0001 0000 0000 0000 0000
+                                 |
+                0000 0000 0000 0000 1000 0111 0101 0010
+                                 =
+                1000 1001 0010 0001 1000 0111 0101 0010
+
+            Effectively combining the 2 8-bit instructions into a single 16-bit instruction
+        */
         let opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
 
